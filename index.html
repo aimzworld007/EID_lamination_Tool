@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Updated Title -->
+    <title>EID Fixed Size Lamination Tool</title> 
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load jsPDF library for PDF generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        /* Custom styles for better visual feedback */
+        :root {
+            /* Define Target Lamination Size: 3.375 in W x 2.125 in H (86mm x 54mm) */
+            --target-width-in: 3.375;
+            --target-height-in: 2.125;
+            --dpi: 300;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7fafc;
+        }
+
+        .cropper-container {
+            position: relative;
+            cursor: crosshair;
+            margin-bottom: 1rem;
+            background-color: #e9ecef;
+            border: 2px dashed #a0aec0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 200px;
+            overflow: auto;
+        }
+
+        .canvas-output {
+            border: 1px solid #4a5568;
+            background-color: #fff;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Hide default file input */
+        .file-label {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-xl p-6 md:p-10">
+        <header class="text-center mb-10">
+            <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-700">EID Fixed Size Lamination Tool</h1>
+        </header>
+        
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Image 1 Area -->
+            <section id="photo1-section" class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">EID Front</h2>
+                <input type="file" id="file1" accept="image/*" onchange="handleFileSelect(event, 1)">
+                <label for="file1" class="file-label inline-block w-full text-center py-3 px-4 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                    Click to Upload Photo 1
+                </label>
+
+                <!-- Original Image Preview -->
+                <div class="mt-4">
+                    <h3 class="font-medium text-gray-700 mb-2">Original Image Preview (Rotate and Drag to Crop)</h3>
+                    <div class="cropper-container rounded-lg overflow-hidden">
+                        <canvas id="canvas-source-1" class="w-full h-full object-contain"></canvas>
+                    </div>
+                </div>
+
+                <!-- Rotation Controls (Slider) -->
+                <div class="p-3 bg-white rounded-lg shadow-sm mb-4">
+                    <label for="rotation-slider-1" class="block text-sm font-medium text-gray-700 mb-2">
+                        Rotate Image: <span id="rotation-value-1">0°</span>
+                    </label>
+                    <input type="range" id="rotation-slider-1" min="-180" max="180" value="0" step="0.1" 
+                           oninput="handleRotationSlider(1, this.value)" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                </div>
+
+                <!-- Cropping Inputs - Updated text for free-size cropping -->
+                <div class="mt-4 p-4 border rounded-lg bg-white shadow-sm" id="crop-settings-1">
+                    <h3 class="font-medium text-gray-700 mb-3">Crop Area on Current View (Pixels) - Free Size Crop</h3>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <input type="number" id="crop-x-1" placeholder="X Start (px)" class="p-2 border rounded" value="0" onchange="updateCropFromInput(1)">
+                        <input type="number" id="crop-y-1" placeholder="Y Start (px)" class="p-2 border rounded" value="0" onchange="updateCropFromInput(1)">
+                        <input type="number" id="crop-w-1" placeholder="Crop Width (px)" class="p-2 border rounded" onchange="updateCropFromInput(1)">
+                        <input type="number" id="crop-h-1" placeholder="Crop Height (px)" class="p-2 border rounded" onchange="updateCropFromInput(1)">
+                    </div>
+                    <button onclick="processImage(1)" class="mt-4 w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
+                        Process & Resize Photo 1 (86mm x 54mm)
+                    </button>
+                </div>
+
+                <!-- Processed Output -->
+                <div class="mt-6">
+                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-1">Processed Output: 86mm W x 54mm H (1013 x 638 px @ 300 DPI)</h3>
+                    <canvas id="canvas-output-1" class="canvas-output max-w-full mx-auto" style="display: none;"></canvas>
+                    <p id="status-1" class="text-sm text-gray-500 mt-2"></p>
+                </div>
+            </section>
+
+            <!-- Image 2 Area -->
+            <section id="photo2-section" class="bg-gray-50 p-6 rounded-lg shadow-inner">
+                <h2 class="text-2xl font-bold text-gray-800 mb-4 border-b pb-2">EID Backside (Optional)</h2>
+                <input type="file" id="file2" accept="image/*" onchange="handleFileSelect(event, 2)">
+                <label for="file2" class="file-label inline-block w-full text-center py-3 px-4 bg-indigo-500 text-white font-semibold rounded-lg hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition duration-150 ease-in-out">
+                    Click to Upload Photo 2
+                </label>
+
+                <!-- Original Image Preview -->
+                <div class="mt-4">
+                    <h3 class="font-medium text-gray-700 mb-2">Original Image Preview (Rotate and Drag to Crop)</h3>
+                    <div class="cropper-container rounded-lg overflow-hidden">
+                        <canvas id="canvas-source-2" class="w-full h-full object-contain"></canvas>
+                    </div>
+                </div>
+
+                <!-- Rotation Controls (Slider) -->
+                <div class="p-3 bg-white rounded-lg shadow-sm mb-4">
+                    <label for="rotation-slider-2" class="block text-sm font-medium text-gray-700 mb-2">
+                        Rotate Image: <span id="rotation-value-2">0°</span>
+                    </label>
+                    <input type="range" id="rotation-slider-2" min="-180" max="180" value="0" step="0.1" 
+                           oninput="handleRotationSlider(2, this.value)" 
+                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                </div>
+
+                <!-- Cropping Inputs - Updated text for free-size cropping -->
+                <div class="mt-4 p-4 border rounded-lg bg-white shadow-sm" id="crop-settings-2">
+                    <h3 class="font-medium text-gray-700 mb-3">Crop Area on Current View (Pixels) - Free Size Crop</h3>
+                    <div class="grid grid-cols-2 gap-3 text-sm">
+                        <input type="number" id="crop-x-2" placeholder="X Start (px)" class="p-2 border rounded" value="0" onchange="updateCropFromInput(2)">
+                        <input type="number" id="crop-y-2" placeholder="Y Start (px)" class="p-2 border rounded" value="0" onchange="updateCropFromInput(2)">
+                        <input type="number" id="crop-w-2" placeholder="Crop Width (px)" class="p-2 border rounded" onchange="updateCropFromInput(2)">
+                        <input type="number" id="crop-h-2" placeholder="Crop Height (px)" class="p-2 border rounded" onchange="updateCropFromInput(2)">
+                    </div>
+                    <button onclick="processImage(2)" class="mt-4 w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
+                        Process & Resize Photo 2 (86mm x 54mm)
+                    </button>
+                </div>
+
+                <!-- Processed Output -->
+                <div class="mt-6">
+                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-2">Processed Output: 86mm W x 54mm H (1013 x 638 px @ 300 DPI)</h3>
+                    <canvas id="canvas-output-2" class="canvas-output max-w-full mx-auto" style="display: none;"></canvas>
+                    <p id="status-2" class="text-sm text-gray-500 mt-2"></p>
+                </div>
+            </section>
+        </main>
+
+        <!-- Global Output Controls -->
+        <div class="mt-10 pt-6 border-t border-gray-200 text-center">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4">Final Output</h2>
+            <p id="global-status" class="text-red-500 mb-4 font-semibold"></p>
+            <button onclick="generatePDF()" class="py-3 px-8 bg-blue-600 text-white font-bold rounded-full text-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-150 ease-in-out shadow-lg transform hover:scale-105">
+                Generate PDF (Save/Print)
+            </button>
+        </div>
+    </div>
+    
+    <!-- Footer Credit Added -->
+    <footer class="mt-8 text-center text-sm text-gray-500 pb-4">
+        Made With <span class="text-red-500">❤️</span> By 
+        <a href="http://ainulislam.info" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-medium transition duration-150">
+            Ainul Islam (ainulislam.info)
+        </a>
+    </footer>
+
+    <script>
+        // Global storage for original images and configuration
+        const images = {
+            1: { img: null, processed: false, filename: 'photo1.jpg', rotation: 0 },
+            2: { img: null, processed: false, filename: 'photo2.jpg', rotation: 0 }
+        };
+
+        // --- FIXED LAMINATION SIZE (CR80: 86mm W x 54mm H) ---
+        const DPI = 300;
+        const TARGET_WIDTH_IN = 3.375; // 86 mm
+        const TARGET_HEIGHT_IN = 2.125; // 54 mm
+        
+        // Calculate required pixel size at 300 DPI 
+        const TARGET_WIDTH_PX = Math.round(TARGET_WIDTH_IN * DPI); // 1013 px
+        const TARGET_HEIGHT_PX = Math.round(TARGET_HEIGHT_IN * DPI); // 638 px
+        
+        // A4 dimensions in mm for PDF generation
+        const A4_WIDTH_MM = 210;
+        const A4_HEIGHT_MM = 297;
+        
+        // Convert target inches to mm for PDF placement
+        const TARGET_WIDTH_MM = TARGET_WIDTH_IN * 25.4;
+        const TARGET_HEIGHT_MM = TARGET_HEIGHT_IN * 25.4;
+
+
+        // Global state for interactive cropping
+        const croppingState = {
+            1: { isDragging: false, startX: 0, startY: 0, cropRect: { x: 0, y: 0, w: 0, h: 0 } },
+            2: { isDragging: false, startX: 0, startY: 0, cropRect: { x: 0, y: 0, w: 0, h: 0 } }
+        };
+        const TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN; 
+
+        /**
+         * Redraws the source canvas, applying the current rotation and drawing the crop overlay.
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function drawSourceCanvas(id) {
+            const imgData = images[id];
+            const img = imgData.img;
+            if (!img) return;
+
+            const canvas = document.getElementById(`canvas-source-${id}`);
+            const ctx = canvas.getContext('2d');
+            const rotation = imgData.rotation;
+            const state = croppingState[id];
+
+            const OW = img.naturalWidth;
+            const OH = img.naturalHeight;
+
+            // Set canvas size to the full original image size
+            canvas.width = OW;
+            canvas.height = OH;
+
+            ctx.clearRect(0, 0, OW, OH);
+            
+            // --- 1. Apply Image Transformation for Display ---
+            ctx.save();
+            ctx.translate(OW / 2, OH / 2);
+            ctx.rotate(rotation * Math.PI / 180);
+            ctx.drawImage(img, -OW / 2, -OH / 2, OW, OH);
+            ctx.restore(); 
+
+            // --- 2. Draw Cropping Overlay ---
+            const { x, y, w, h } = state.cropRect;
+            
+            if (w > 0 && h > 0) {
+                // Draw the crop box border
+                ctx.strokeStyle = 'cyan';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, y, w, h);
+
+                // Draw Corner Handles
+                const handleSize = 10;
+                ctx.fillStyle = 'cyan';
+                
+                ctx.fillRect(x - handleSize / 2, y - handleSize / 2, handleSize, handleSize); 
+                ctx.fillRect(x + w - handleSize / 2, y - handleSize / 2, handleSize, handleSize); 
+                ctx.fillRect(x - handleSize / 2, y + h - handleSize / 2, handleSize, handleSize); 
+                ctx.fillRect(x + w - handleSize / 2, y + h - handleSize / 2, handleSize, handleSize); 
+            }
+        }
+
+        /**
+         * Updates the pixel input fields with the current crop dimensions.
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function updateCropInputs(id) {
+            const { x, y, w, h } = croppingState[id].cropRect;
+            document.getElementById(`crop-x-${id}`).value = Math.round(x);
+            document.getElementById(`crop-y-${id}`).value = Math.round(y);
+            document.getElementById(`crop-w-${id}`).value = Math.round(w);
+            document.getElementById(`crop-h-${id}`).value = Math.round(h);
+        }
+
+        /**
+         * Updates the crop rectangle based on manual input changes, then redraws, enforcing canvas bounds (free size).
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function updateCropFromInput(id) {
+            if (!images[id].img) return;
+
+            let cropX = parseFloat(document.getElementById(`crop-x-${id}`).value) || 0;
+            let cropY = parseFloat(document.getElementById(`crop-y-${id}`).value) || 0;
+            let cropW = parseFloat(document.getElementById(`crop-w-${id}`).value) || 0;
+            let cropH = parseFloat(document.getElementById(`crop-h-${id}`).value) || 0;
+
+            const canvas = document.getElementById(`canvas-source-${id}`);
+
+            // 1. Ensure crop stays within bounds of the canvas
+            cropX = Math.max(0, cropX);
+            cropY = Math.max(0, cropY);
+
+            // Constrain width and height based on the available space from (cropX, cropY)
+            cropW = Math.min(cropW, canvas.width - cropX);
+            cropH = Math.min(cropH, canvas.height - cropY);
+            
+            cropW = Math.max(0, cropW);
+            cropH = Math.max(0, cropH);
+
+            croppingState[id].cropRect = { x: cropX, y: cropY, w: cropW, h: cropH };
+            drawSourceCanvas(id);
+            updateCropInputs(id); 
+        }
+
+
+        /**
+         * Handles mouse down event to start drawing the crop box.
+         * @param {number} id Photo ID (1 or 2).
+         * @param {MouseEvent|Touch} e Event object.
+         */
+        function handleMouseDown(id, e) {
+            if (!images[id].img) return;
+
+            const state = croppingState[id];
+            const canvas = document.getElementById(`canvas-source-${id}`);
+            const rect = canvas.getBoundingClientRect();
+            
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            state.isDragging = true;
+            state.startX = (e.clientX - rect.left) * scaleX;
+            state.startY = (e.clientY - rect.top) * scaleY;
+
+            state.cropRect = { x: state.startX, y: state.startY, w: 0, h: 0 };
+            updateCropInputs(id);
+        }
+
+        /**
+         * Handles mouse move event to draw/resize the crop box (free size).
+         * @param {number} id Photo ID (1 or 2).
+         * @param {MouseEvent|Touch} e Event object.
+         */
+        function handleMouseMove(id, e) {
+            const state = croppingState[id];
+            if (!state.isDragging) return;
+
+            const canvas = document.getElementById(`canvas-source-${id}`);
+            const rect = canvas.getBoundingClientRect();
+            
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            let currentX = (e.clientX - rect.left) * scaleX;
+            let currentY = (e.clientY - rect.top) * scaleY;
+
+            let width = currentX - state.startX;
+            let height = currentY - state.startY;
+
+            let absWidth = Math.abs(width);
+            let absHeight = Math.abs(height);
+            
+            // Determine the final coordinates and dimensions (Free Size Logic)
+            let x = width > 0 ? state.startX : currentX;
+            let y = height > 0 ? state.startY : currentY;
+            let w = absWidth;
+            let h = absHeight;
+            
+            // --- Canvas Boundaries Clipping ---
+            x = Math.max(0, x);
+            y = Math.max(0, y);
+            
+            w = Math.min(w, canvas.width - x);
+            h = Math.min(h, canvas.height - y);
+            
+            w = Math.max(0, w);
+            h = Math.max(0, h);
+
+            state.cropRect = { x: x, y: y, w: w, h: h };
+            
+            updateCropInputs(id);
+            drawSourceCanvas(id);
+        }
+
+        /**
+         * Handles mouse up event to finalize crop box.
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function handleMouseUp(id) {
+            const state = croppingState[id];
+            state.isDragging = false;
+        }
+
+        /**
+         * Attaches mouse and touch event listeners for interactive cropping.
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function initCropping(id) {
+            const canvas = document.getElementById(`canvas-source-${id}`);
+
+            // Remove existing listeners to prevent duplication
+            canvas.onmousedown = null;
+            window.onmousemove = null;
+            window.onmouseup = null;
+            canvas.ontouchstart = null;
+            window.ontouchmove = null;
+            window.ontouchend = null;
+
+            // Mouse listeners
+            canvas.onmousedown = (e) => handleMouseDown(id, e);
+            window.onmousemove = (e) => handleMouseMove(id, e);
+            window.onmouseup = () => handleMouseUp(id);
+
+            // Touch listeners for mobile responsiveness
+            canvas.ontouchstart = (e) => {
+                e.preventDefault();
+                handleMouseDown(id, e.touches[0]);
+            };
+            window.ontouchmove = (e) => {
+                if (croppingState[id].isDragging) {
+                    e.preventDefault();
+                    handleMouseMove(id, e.touches[0]);
+                }
+            };
+            window.ontouchend = () => handleMouseUp(id);
+        }
+
+
+        /**
+         * Loads the selected image file and initializes state.
+         * @param {Event} event The file input change event.
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function handleFileSelect(event, id) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            images[id].processed = false;
+            images[id].filename = file.name;
+            images[id].rotation = 0; 
+
+            document.getElementById(`rotation-slider-${id}`).value = 0;
+            document.getElementById(`rotation-value-${id}`).textContent = '0°';
+
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    images[id].img = img;
+                    
+                    initCropping(id);
+
+                    // Initialize crop to the largest possible fixed-ratio box, centered for convenience
+                    const OW = img.naturalWidth;
+                    const OH = img.naturalHeight;
+
+                    let startW = OW;
+                    let startH = OH;
+
+                    // Set initial crop to the full image
+                    const xCenter = 0;
+                    const yCenter = 0;
+
+                    croppingState[id].cropRect = {
+                        x: xCenter,
+                        y: yCenter,
+                        w: startW,
+                        h: startH
+                    };
+                    
+                    drawSourceCanvas(id);
+                    updateCropInputs(id);
+                    
+                    document.getElementById(`status-${id}`).textContent = `Image loaded: ${OW} x ${OH} px. Drag to select any crop area.`;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        /**
+         * Handles the rotation slider input.
+         * @param {number} id Photo ID (1 or 2).
+         * @param {string} value The current rotation value in degrees.
+         */
+        function handleRotationSlider(id, value) {
+            const degrees = parseFloat(value);
+            images[id].rotation = degrees;
+            document.getElementById(`rotation-value-${id}`).textContent = `${degrees.toFixed(1)}°`;
+            drawSourceCanvas(id);
+            document.getElementById(`status-${id}`).textContent = `Rotation set to ${degrees.toFixed(1)}°.`;
+        }
+
+
+        /**
+         * Processes the selected image: rotates, extracts the fixed 86x54mm ratio from the user's free crop, and resizes it (to the fixed DPI size).
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function processImage(id) {
+            const imgData = images[id];
+            if (!imgData.img) {
+                document.getElementById(`status-${id}`).textContent = 'Error: Please upload an image first.';
+                return;
+            }
+            
+            const userCropX = parseFloat(document.getElementById(`crop-x-${id}`).value);
+            const userCropY = parseFloat(document.getElementById(`crop-y-${id}`).value);
+            const userCropW = parseFloat(document.getElementById(`crop-w-${id}`).value);
+            const userCropH = parseFloat(document.getElementById(`crop-h-${id}`).value);
+            
+            const OW = imgData.img.naturalWidth;
+            const OH = imgData.img.naturalHeight;
+            const rotation = imgData.rotation;
+
+            if (userCropW <= 0 || userCropH <= 0) {
+                document.getElementById(`status-${id}`).textContent = 'Error: Crop area must have positive width and height.';
+                return;
+            }
+            
+            // --- LOGIC: Calculate Fixed Ratio Crop INSIDE the User's Free-Size Crop Area ---
+            let finalCropW, finalCropH, finalCropX, finalCropY;
+            
+            // Determine the largest fixed-ratio rectangle that fits within the user's cropW x cropH area
+            if ((userCropW / userCropH) > TARGET_ASPECT_RATIO) {
+                // User's crop is wider than required ratio. Constrain by height.
+                finalCropH = userCropH;
+                finalCropW = finalCropH * TARGET_ASPECT_RATIO;
+            } else {
+                // User's crop is taller than required ratio. Constrain by width.
+                finalCropW = userCropW;
+                finalCropH = finalCropW / TARGET_ASPECT_RATIO;
+            }
+            
+            // Center the fixed-ratio crop within the user's selected area
+            finalCropX = userCropX + (userCropW - finalCropW) / 2;
+            finalCropY = userCropY + (userCropH - finalCropH) / 2;
+
+
+            try {
+                // --- Step 1: Create a Rotated Canvas ---
+                const rotatedCanvas = document.createElement('canvas');
+                rotatedCanvas.width = OW;
+                rotatedCanvas.height = OH;
+                const rCtx = rotatedCanvas.getContext('2d');
+
+                rCtx.save();
+                rCtx.translate(OW / 2, OH / 2);
+                rCtx.rotate(rotation * Math.PI / 180);
+                rCtx.drawImage(imgData.img, -OW / 2, -OH / 2, OW, OH);
+                rCtx.restore();
+
+                // --- Step 2: Crop the Rotated Image (using the calculated final, ratio-correct dimensions) ---
+                const croppedCanvas = document.createElement('canvas');
+                croppedCanvas.width = finalCropW; // Use final dimensions
+                croppedCanvas.height = finalCropH; // Use final dimensions
+                const cCtx = croppedCanvas.getContext('2d');
+
+                cCtx.drawImage(
+                    rotatedCanvas, 
+                    finalCropX, finalCropY, finalCropW, finalCropH, // Use final dimensions and position
+                    0, 0, finalCropW, finalCropH 
+                );
+
+                // --- Step 3: Resize and Output to Final Canvas (Fixed DPI Size) ---
+                const outputCanvas = document.getElementById(`canvas-output-${id}`);
+                
+                const targetW_px = TARGET_WIDTH_PX;
+                const targetH_px = TARGET_HEIGHT_PX;
+                
+                outputCanvas.width = targetW_px;
+                outputCanvas.height = targetH_px;
+                outputCanvas.style.display = 'block';
+
+                const outputCtx = outputCanvas.getContext('2d');
+                outputCtx.drawImage(
+                    croppedCanvas, 
+                    0, 0, finalCropW, finalCropH, 
+                    0, 0, targetW_px, targetH_px 
+                );
+
+                imgData.processed = true;
+
+                const statusMsg = `✅ Processed, rotated, cropped, and resized to ${targetW_px} x ${targetH_px} px (86mm x 54mm).`;
+                document.getElementById(`status-${id}`).textContent = statusMsg;
+
+            } catch (error) {
+                console.error("Image processing failed:", error);
+                document.getElementById(`status-${id}`).textContent = 'An error occurred during processing. Check console for details.';
+            }
+        }
+
+        /**
+         * Generates an A4 PDF containing the two processed images.
+         */
+        function generatePDF() {
+            document.getElementById('global-status').textContent = '';
+            
+            const isPhoto1Processed = images[1].processed;
+            const isPhoto2Processed = images[2].processed;
+
+            if (!isPhoto1Processed && !isPhoto2Processed) {
+                document.getElementById('global-status').textContent = 'Error: Please upload and process at least one photo first.';
+                return;
+            }
+
+            // A4 page setup in 'mm' (jsPDF default units)
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({
+                unit: 'mm',
+                format: 'a4',
+                orientation: 'p' 
+            });
+
+            // Start position (center top of page, with some margin)
+            let xOffset, yOffset = 15; // 15mm top margin
+            
+            // Fixed output size in mm
+            const targetWidthMM = TARGET_WIDTH_MM;
+            const targetHeightMM = TARGET_HEIGHT_MM;
+
+            for (let id = 1; id <= 2; id++) {
+                if (images[id].processed) {
+                    const canvas = document.getElementById(`canvas-output-${id}`);
+                    
+                    // Center the image horizontally
+                    xOffset = (A4_WIDTH_MM - targetWidthMM) / 2;
+
+                    // Check if image fits on the current page
+                    if (yOffset + targetHeightMM > A4_HEIGHT_MM - 10) { 
+                        doc.addPage();
+                        yOffset = 15; // Reset to top margin
+                        xOffset = (A4_WIDTH_MM - targetWidthMM) / 2; // Recalculate center
+                    }
+
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                    // Add Photo to PDF
+                    doc.addImage(imgData, 'JPEG', xOffset, yOffset, targetWidthMM, targetHeightMM);
+                    yOffset += targetHeightMM + 10; // Move down for the next image (10mm gap)
+                }
+            }
+
+            // Save the PDF file
+            const filename = (isPhoto1Processed && isPhoto2Processed) ? 'CR80_Lamination_Photos_86x54mm.pdf' : 'CR80_Lamination_Photo_86x54mm.pdf';
+            doc.save(filename);
+            
+            document.getElementById('global-status').textContent = '✅ PDF generated and downloaded!';
+        }
+    </script>
+</body>
+</html>
