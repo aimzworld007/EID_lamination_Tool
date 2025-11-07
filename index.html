@@ -12,9 +12,9 @@
     <style>
         /* Custom styles for better visual feedback */
         :root {
-            /* Define Target Lamination Size: 3.4 in W x 2.4 in H */
-            --target-width-in: 3.4;
-            --target-height-in: 2.4;
+            /* Define Target Lamination Size: 3.2 in W x 2.2 in H */
+            --target-width-in: 3.2;
+            --target-height-in: 2.2;
             --dpi: 600; /* Updated to 600 DPI */
         }
 
@@ -57,7 +57,7 @@
     <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-xl p-6 md:p-10">
         <header class="text-center mb-10">
             <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-700">EID Fixed Size Lamination Tool</h1>
-            <p class="text-gray-500 mt-2">Target Output: 3.4" W x 2.4" H (600 DPI) on A4 Page</p>
+            <p class="text-gray-500 mt-2">Target Output: 3.2" W x 2.2" H (600 DPI) on A4 Page</p>
         </header>
         
         <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -97,14 +97,14 @@
                         <input type="number" id="crop-h-1" placeholder="Crop Height (px)" class="p-2 border rounded" onchange="updateCropFromInput(1)">
                     </div>
                     <button onclick="processImage(1)" class="mt-4 w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
-                        Process & Resize Photo 1 (3.4" x 2.4" @ 600 DPI)
+                        Process & Resize Photo 1 (3.2" x 2.2" @ 600 DPI)
                     </button>
                 </div>
 
                 <!-- Processed Output -->
                 <div class="mt-6">
                     <!-- Updated Output Header -->
-                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-1">Processed Output: 3.4" W x 2.4" H (2040 x 1440 px @ 600 DPI)</h3>
+                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-1">Processed Output: 3.2" W x 2.2" H (2040 x 1440 px @ 600 DPI)</h3>
                     <canvas id="canvas-output-1" class="canvas-output max-w-full mx-auto" style="display: none;"></canvas>
                     <p id="status-1" class="text-sm text-gray-500 mt-2"></p>
                 </div>
@@ -146,14 +146,14 @@
                         <input type="number" id="crop-h-2" placeholder="Crop Height (px)" class="p-2 border rounded" onchange="updateCropFromInput(2)">
                     </div>
                     <button onclick="processImage(2)" class="mt-4 w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
-                        Process & Resize Photo 2 (3.4" x 2.4" @ 600 DPI)
+                        Process & Resize Photo 2 (3.2" x 2.2" @ 600 DPI)
                     </button>
                 </div>
 
                 <!-- Processed Output -->
                 <div class="mt-6">
                     <!-- Updated Output Header -->
-                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-2">Processed Output: 3.4" W x 2.4" H (2040 x 1440 px @ 600 DPI)</h3>
+                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-2">Processed Output: 3.2" W x 2.2" H (2040 x 1440 px @ 600 DPI)</h3>
                     <canvas id="canvas-output-2" class="canvas-output max-w-full mx-auto" style="display: none;"></canvas>
                     <p id="status-2" class="text-sm text-gray-500 mt-2"></p>
                 </div>
@@ -185,10 +185,10 @@
             2: { img: null, processed: false, filename: 'photo2.jpg', rotation: 0 }
         };
 
-        // --- FIXED LAMINATION SIZE (3.4 in W x 2.4 in H @ 600 DPI) ---
+        // --- FIXED LAMINATION SIZE (3.2 in W x 2.2 in H @ 600 DPI) ---
         const DPI = 600; // UPDATED DPI
-        const TARGET_WIDTH_IN = 3.4; // UPDATED WIDTH
-        const TARGET_HEIGHT_IN = 2.4; // UPDATED HEIGHT
+        const TARGET_WIDTH_IN = 3.2; // UPDATED WIDTH
+        const TARGET_HEIGHT_IN = 2.2; // UPDATED HEIGHT
         
         // Calculate required pixel size at 600 DPI 
         const TARGET_WIDTH_PX = Math.round(TARGET_WIDTH_IN * DPI); // 2040 px
@@ -203,7 +203,7 @@
         const TARGET_HEIGHT_MM = TARGET_HEIGHT_IN * 25.4; // 60.96 mm
         
         // Calculate the new aspect ratio
-        const TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN; // 3.4 / 2.4 ≈ 1.4166
+        const TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN; // 3.2 / 2.2 ≈ 1.4166
 
 
         // Global state for interactive cropping
@@ -479,7 +479,7 @@
 
 
         /**
-         * Processes the selected image: rotates, extracts the fixed 3.4"x2.4" ratio from the user's free crop, and resizes it (to the fixed DPI size).
+         * Processes the selected image: rotates, extracts the fixed 3.2"x2.2" ratio from the user's free crop, and resizes it (to the fixed DPI size).
          * @param {number} id Photo ID (1 or 2).
          */
         function processImage(id) {
@@ -508,11 +508,11 @@
             
             // Determine the largest fixed-ratio rectangle that fits within the user's cropW x cropH area
             if ((userCropW / userCropH) > TARGET_ASPECT_RATIO) {
-                // User's crop is wider than required ratio (3.4/2.4). Constrain by height.
+                // User's crop is wider than required ratio (3.2/2.2). Constrain by height.
                 finalCropH = userCropH;
                 finalCropW = finalCropH * TARGET_ASPECT_RATIO;
             } else {
-                // User's crop is taller than required ratio (3.4/2.4). Constrain by width.
+                // User's crop is taller than required ratio (3.2/2.2). Constrain by width.
                 finalCropW = userCropW;
                 finalCropH = finalCropW / TARGET_ASPECT_RATIO;
             }
@@ -567,7 +567,7 @@
 
                 imgData.processed = true;
 
-                const statusMsg = `✅ Processed, rotated, cropped, and resized to ${targetW_px} x ${targetH_px} px (3.4" x 2.4" @ 600 DPI).`;
+                const statusMsg = `✅ Processed, rotated, cropped, and resized to ${targetW_px} x ${targetH_px} px (3.2" x 2.2" @ 600 DPI).`;
                 document.getElementById(`status-${id}`).textContent = statusMsg;
 
             } catch (error) {
@@ -629,7 +629,7 @@
             }
 
             // Save the PDF file
-            const filename = (isPhoto1Processed && isPhoto2Processed) ? 'EID_Photos_3.4x2.4in_600DPI.pdf' : 'EID_Photo_3.4x2.4in_600DPI.pdf';
+            const filename = (isPhoto1Processed && isPhoto2Processed) ? 'EID_Photos_3.2x2.2in_600DPI.pdf' : 'EID_Photo_3.2x2.2in_600DPI.pdf';
             doc.save(filename);
             
             document.getElementById('global-status').textContent = '✅ PDF generated and downloaded!';
