@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Updated Title -->
     <title>EID Fixed Size Lamination Tool</title> 
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -11,13 +10,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         /* Custom styles for better visual feedback */
-        :root {
-            /* Define Target Lamination Size: 3.2 in W x 2.2 in H */
-            --target-width-in: 3.2;
-            --target-height-in: 2.2;
-            --dpi: 600; /* Updated to 600 DPI */
-        }
-
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f7fafc;
@@ -55,10 +47,31 @@
 </head>
 <body class="p-4 md:p-8">
     <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-xl p-6 md:p-10">
+        
         <header class="text-center mb-10">
             <h1 class="text-3xl md:text-4xl font-extrabold text-indigo-700">EID Fixed Size Lamination Tool</h1>
-            <p class="text-gray-500 mt-2">Target Output: 3.2" W x 2.2" H (600 DPI) on A4 Page</p>
+            <p id="target-output-display" class="text-gray-500 mt-2">Target Output: 3.2" W x 2.2" H (600 DPI) on A4 Page</p>
         </header>
+
+        <!-- NEW: Dimension Control Panel -->
+        <div class="mb-8 p-6 bg-blue-50 border-l-4 border-blue-500 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold text-blue-800 mb-4">Adjust Output Dimensions (Inches)</h2>
+            <div class="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                <div>
+                    <label for="target-width-input" class="block text-sm font-medium text-gray-700">Width (Inches):</label>
+                    <input type="number" id="target-width-input" value="3.2" min="0.1" step="0.1" 
+                           onchange="updateTargetDimensions()" 
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-center text-lg font-semibold focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div>
+                    <label for="target-height-input" class="block text-sm font-medium text-gray-700">Height (Inches):</label>
+                    <input type="number" id="target-height-input" value="2.2" min="0.1" step="0.1" 
+                           onchange="updateTargetDimensions()" 
+                           class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-center text-lg font-semibold focus:ring-blue-500 focus:border-blue-500">
+                </div>
+            </div>
+            <p class="text-xs text-blue-700 mt-3 text-center">Changing these values updates the required aspect ratio and output size.</p>
+        </div>
         
         <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
             <!-- Image 1 Area -->
@@ -97,14 +110,14 @@
                         <input type="number" id="crop-h-1" placeholder="Crop Height (px)" class="p-2 border rounded" onchange="updateCropFromInput(1)">
                     </div>
                     <button onclick="processImage(1)" class="mt-4 w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
-                        Process & Resize Photo 1 (3.2" x 2.2" @ 600 DPI)
+                        Process & Resize Photo 1 (<span id="btn-size-display-1">3.2" x 2.2" @ 600 DPI</span>)
                     </button>
                 </div>
 
                 <!-- Processed Output -->
                 <div class="mt-6">
-                    <!-- Updated Output Header -->
-                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-1">Processed Output: 3.2" W x 2.2" H (2040 x 1440 px @ 600 DPI)</h3>
+                    <!-- Dynamic Output Header -->
+                    <h3 class="font-medium text-gray-700 mb-2">Processed Output: <span id="size-display-1"></span></h3>
                     <canvas id="canvas-output-1" class="canvas-output max-w-full mx-auto" style="display: none;"></canvas>
                     <p id="status-1" class="text-sm text-gray-500 mt-2"></p>
                 </div>
@@ -146,14 +159,14 @@
                         <input type="number" id="crop-h-2" placeholder="Crop Height (px)" class="p-2 border rounded" onchange="updateCropFromInput(2)">
                     </div>
                     <button onclick="processImage(2)" class="mt-4 w-full py-2 bg-green-500 text-white font-semibold rounded-lg hover:bg-green-600 transition">
-                        Process & Resize Photo 2 (3.2" x 2.2" @ 600 DPI)
+                        Process & Resize Photo 2 (<span id="btn-size-display-2">3.2" x 2.2" @ 600 DPI</span>)
                     </button>
                 </div>
 
                 <!-- Processed Output -->
                 <div class="mt-6">
-                    <!-- Updated Output Header -->
-                    <h3 class="font-medium text-gray-700 mb-2" id="output-header-2">Processed Output: 3.2" W x 2.2" H (2040 x 1440 px @ 600 DPI)</h3>
+                    <!-- Dynamic Output Header -->
+                    <h3 class="font-medium text-gray-700 mb-2">Processed Output: <span id="size-display-2"></span></h3>
                     <canvas id="canvas-output-2" class="canvas-output max-w-full mx-auto" style="display: none;"></canvas>
                     <p id="status-2" class="text-sm text-gray-500 mt-2"></p>
                 </div>
@@ -185,25 +198,69 @@
             2: { img: null, processed: false, filename: 'photo2.jpg', rotation: 0 }
         };
 
-        // --- FIXED LAMINATION SIZE (3.2 in W x 2.2 in H @ 600 DPI) ---
-        const DPI = 600; // 600 DPI
-        const TARGET_WIDTH_IN = 3.2; // 3.2 inches Width
-        const TARGET_HEIGHT_IN = 2.2; // 2.2 inches Height
-        
-        // Calculate required pixel size at 600 DPI 
-        const TARGET_WIDTH_PX = Math.round(TARGET_WIDTH_IN * DPI); // 2040 px
-        const TARGET_HEIGHT_PX = Math.round(TARGET_HEIGHT_IN * DPI); // 1440 px
-        
-        // A4 dimensions in mm for PDF generation
+        // --- DYNAMIC LAMINATION SIZE CONFIGURATION ---
+        const DPI = 600; // Fixed DPI
         const A4_WIDTH_MM = 210;
         const A4_HEIGHT_MM = 297;
         
-        // Convert target inches to mm for PDF placement
-        const TARGET_WIDTH_MM = TARGET_WIDTH_IN * 25.4; // 86.36 mm
-        const TARGET_HEIGHT_MM = TARGET_HEIGHT_IN * 25.4; // 60.96 mm
+        // Dynamic variables (will be calculated in updateTargetDimensions)
+        let TARGET_WIDTH_IN, TARGET_HEIGHT_IN;
+        let TARGET_WIDTH_PX, TARGET_HEIGHT_PX;
+        let TARGET_WIDTH_MM, TARGET_HEIGHT_MM;
+        let TARGET_ASPECT_RATIO;
         
-        // Calculate the new aspect ratio
-        const TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN; // 3.2 / 2.2 ≈ 1.4545
+        /**
+         * Reads the input fields, recalculates all dependent size variables, and updates the UI labels.
+         */
+        function updateTargetDimensions() {
+            const widthInput = document.getElementById('target-width-input');
+            const heightInput = document.getElementById('target-height-input');
+
+            // 1. Read values and ensure minimum size (0.1 inch)
+            let width = parseFloat(widthInput.value) || 3.2;
+            let height = parseFloat(heightInput.value) || 2.2;
+            
+            if (width < 0.1) width = 0.1;
+            if (height < 0.1) height = 0.1;
+            
+            // Re-set input values to enforce minimum and fix decimals
+            widthInput.value = width.toFixed(1);
+            heightInput.value = height.toFixed(1);
+
+            // 2. Update global variables
+            TARGET_WIDTH_IN = width;
+            TARGET_HEIGHT_IN = height;
+
+            // 3. Recalculate dependent values
+            TARGET_WIDTH_PX = Math.round(TARGET_WIDTH_IN * DPI);
+            TARGET_HEIGHT_PX = Math.round(TARGET_HEIGHT_IN * DPI);
+            
+            TARGET_WIDTH_MM = TARGET_WIDTH_IN * 25.4;
+            TARGET_HEIGHT_MM = TARGET_HEIGHT_IN * 25.4;
+            
+            TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN;
+
+            // 4. Update UI labels
+            const displayString = `${TARGET_WIDTH_IN.toFixed(1)}" W x ${TARGET_HEIGHT_IN.toFixed(1)}" H (${TARGET_WIDTH_PX} x ${TARGET_HEIGHT_PX} px @ ${DPI} DPI)`;
+            const btnDisplayString = `${TARGET_WIDTH_IN.toFixed(1)}" x ${TARGET_HEIGHT_IN.toFixed(1)}" @ ${DPI} DPI`;
+            
+            document.getElementById('target-output-display').textContent = `Target Output: ${displayString} on A4 Page`;
+            
+            // Update section headers
+            document.getElementById('size-display-1').textContent = displayString;
+            document.getElementById('size-display-2').textContent = displayString;
+            document.getElementById('btn-size-display-1').textContent = btnDisplayString;
+            document.getElementById('btn-size-display-2').textContent = btnDisplayString;
+            
+            // Clear status/processed flags as the target size changed (optional but safer)
+            images[1].processed = false;
+            images[2].processed = false;
+            document.getElementById('status-1').textContent = '';
+            document.getElementById('status-2').textContent = '';
+        }
+        
+        // Initialize dimensions on load
+        window.onload = updateTargetDimensions;
 
 
         // Global state for interactive cropping
@@ -479,10 +536,13 @@
 
 
         /**
-         * Processes the selected image: rotates, extracts the fixed 3.2"x2.2" ratio from the user's free crop, and resizes it (to the fixed DPI size).
+         * Processes the selected image: rotates, extracts the fixed ratio from the user's free crop, and resizes it (to the fixed DPI size).
          * @param {number} id Photo ID (1 or 2).
          */
         function processImage(id) {
+            // Re-read dimensions before processing
+            updateTargetDimensions(); 
+            
             const imgData = images[id];
             if (!imgData.img) {
                 document.getElementById(`status-${id}`).textContent = 'Error: Please upload an image first.';
@@ -506,11 +566,11 @@
             
             // Determine the largest fixed-ratio rectangle that fits within the user's cropW x cropH area
             if ((userCropW / userCropH) > TARGET_ASPECT_RATIO) {
-                // User's crop is wider than required ratio (3.2/2.2). Constrain by height.
+                // User's crop is wider than required ratio. Constrain by height.
                 finalCropH = userCropH;
                 finalCropW = finalCropH * TARGET_ASPECT_RATIO;
             } else {
-                // User's crop is taller than required ratio (3.2/2.2). Constrain by width.
+                // User's crop is taller than required ratio. Constrain by width.
                 finalCropW = userCropW;
                 finalCropH = finalCropW / TARGET_ASPECT_RATIO;
             }
@@ -568,7 +628,7 @@
 
                 imgData.processed = true;
 
-                const statusMsg = `✅ Processed, rotated, cropped, and resized to ${targetW_px} x ${targetH_px} px (3.2" x 2.2" @ 600 DPI).`;
+                const statusMsg = `✅ Processed, rotated, cropped, and resized to ${targetW_px} x ${targetH_px} px (${TARGET_WIDTH_IN.toFixed(1)}" x ${TARGET_HEIGHT_IN.toFixed(1)}" @ ${DPI} DPI).`;
                 document.getElementById(`status-${id}`).textContent = statusMsg;
 
             } catch (error) {
@@ -581,6 +641,9 @@
          * Generates an A4 PDF containing the two processed images.
          */
         function generatePDF() {
+            // Re-read dimensions before PDF generation
+            updateTargetDimensions(); 
+            
             document.getElementById('global-status').textContent = '';
             
             const isPhoto1Processed = images[1].processed;
@@ -602,7 +665,7 @@
             // Start position (center top of page, with some margin)
             let xOffset, yOffset = 15; // 15mm top margin
             
-            // Fixed output size in mm
+            // Dynamic output size in mm
             const targetWidthMM = TARGET_WIDTH_MM;
             const targetHeightMM = TARGET_HEIGHT_MM;
 
@@ -629,8 +692,11 @@
                 }
             }
 
-            // Save the PDF file
-            const filename = (isPhoto1Processed && isPhoto2Processed) ? 'EID_Photos_3.2x2.2in_600DPI.pdf' : 'EID_Photo_3.2x2.2in_600DPI.pdf';
+            // Save the PDF file with dynamic size in the filename
+            const sizeString = `${TARGET_WIDTH_IN.toFixed(1)}x${TARGET_HEIGHT_IN.toFixed(1)}`;
+            const filename = (isPhoto1Processed && isPhoto2Processed) 
+                ? `EID_Photos_${sizeString}in_${DPI}DPI.pdf` 
+                : `EID_Photo_${sizeString}in_${DPI}DPI.pdf`;
             doc.save(filename);
             
             document.getElementById('global-status').textContent = '✅ PDF generated and downloaded!';
