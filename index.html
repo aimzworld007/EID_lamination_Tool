@@ -83,8 +83,8 @@
                         Rotate Image: <span id="rotation-value-1">0°</span>
                     </label>
                     <input type="range" id="rotation-slider-1" min="-180" max="180" value="0" step="0.1" 
-                           oninput="handleRotationSlider(1, this.value)" 
-                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                               oninput="handleRotationSlider(1, this.value)" 
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
                 </div>
 
                 <!-- Cropping Inputs - Updated text for free-size cropping -->
@@ -132,8 +132,8 @@
                         Rotate Image: <span id="rotation-value-2">0°</span>
                     </label>
                     <input type="range" id="rotation-slider-2" min="-180" max="180" value="0" step="0.1" 
-                           oninput="handleRotationSlider(2, this.value)" 
-                           class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
+                               oninput="handleRotationSlider(2, this.value)" 
+                               class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer range-lg">
                 </div>
 
                 <!-- Cropping Inputs - Updated text for free-size cropping -->
@@ -186,9 +186,9 @@
         };
 
         // --- FIXED LAMINATION SIZE (3.2 in W x 2.2 in H @ 600 DPI) ---
-        const DPI = 600; // UPDATED DPI
-        const TARGET_WIDTH_IN = 3.2; // UPDATED WIDTH
-        const TARGET_HEIGHT_IN = 2.2; // UPDATED HEIGHT
+        const DPI = 600; // 600 DPI
+        const TARGET_WIDTH_IN = 3.2; // 3.2 inches Width
+        const TARGET_HEIGHT_IN = 2.2; // 2.2 inches Height
         
         // Calculate required pixel size at 600 DPI 
         const TARGET_WIDTH_PX = Math.round(TARGET_WIDTH_IN * DPI); // 2040 px
@@ -203,7 +203,7 @@
         const TARGET_HEIGHT_MM = TARGET_HEIGHT_IN * 25.4; // 60.96 mm
         
         // Calculate the new aspect ratio
-        const TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN; // 3.2 / 2.2 ≈ 1.4166
+        const TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN; // 3.2 / 2.2 ≈ 1.4545
 
 
         // Global state for interactive cropping
@@ -494,8 +494,6 @@
             const userCropW = parseFloat(document.getElementById(`crop-w-${id}`).value);
             const userCropH = parseFloat(document.getElementById(`crop-h-${id}`).value);
             
-            const OW = imgData.img.naturalWidth;
-            const OH = imgData.img.naturalHeight;
             const rotation = imgData.rotation;
 
             if (userCropW <= 0 || userCropH <= 0) {
@@ -525,6 +523,9 @@
             try {
                 // --- Step 1: Create a Rotated Canvas ---
                 const rotatedCanvas = document.createElement('canvas');
+                const OW = imgData.img.naturalWidth;
+                const OH = imgData.img.naturalHeight;
+
                 rotatedCanvas.width = OW;
                 rotatedCanvas.height = OH;
                 const rCtx = rotatedCanvas.getContext('2d');
@@ -543,8 +544,8 @@
 
                 cCtx.drawImage(
                     rotatedCanvas, 
-                    finalCropX, finalCropY, finalCropW, finalCropH, // Use final dimensions and position
-                    0, 0, finalCropW, finalCropH 
+                    finalCropX, finalCropY, finalCropW, finalCropH, // Source: Use final dimensions and position
+                    0, 0, finalCropW, finalCropH // Destination
                 );
 
                 // --- Step 3: Resize and Output to Final Canvas (Fixed DPI Size) ---
