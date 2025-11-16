@@ -3,193 +3,207 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EID Auto/Manual Crop Tool</title> 
+    <title>EID Auto-Detection Cropper</title> 
     <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Load jsPDF library for PDF generation -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <!-- Load Cropper.js Library for Manual Cropping -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-
     <style>
+        /* Custom styles for modern aesthetics and canvas appearance */
         body {
             font-family: 'Inter', sans-serif;
             background-color: #f8fafc;
         }
+
         .main-card {
-            box-shadow: 0 15px 30px -5px rgba(0, 0, 0, 0.1), 0 6px 6px -4px rgba(0, 0, 0, 0.05);
+            background-color: #ffffff;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
         }
-        .cropper-container-wrapper {
+
+        .cropper-container {
             position: relative;
+            cursor: crosshair;
+            margin-bottom: 1rem;
             background-color: #fafafa;
-            border: 2px solid #e5e7eb;
-            min-height: 250px;
-            overflow: hidden;
-            border-radius: 0.5rem;
+            border: 2px dashed #9ca3af;
             display: flex;
             justify-content: center;
             align-items: center;
+            min-height: 300px;
+            overflow: hidden;
+            border-radius: 0.75rem;
         }
-        /* Style for the image where Cropper.js will initialize */
-        .source-image {
-            max-width: 100%;
-            height: auto;
-            display: block;
-        }
+
         .canvas-output {
-            border: 3px solid #10b981; 
-            box-shadow: 0 5px 10px rgba(16, 185, 129, 0.3);
+            border: 3px solid #10b981; /* Green border for success */
+            background-color: #fff;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
             max-width: 100%;
             height: auto;
             transition: all 0.3s ease-in-out;
         }
+
+        /* Styling for the range slider for rotation */
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: #4f46e5;
+            cursor: pointer;
+            box-shadow: 0 0 2px 0 #5a66c8;
+            margin-top: -6px; /* Adjusting the thumb for cross-browser consistency */
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
     </style>
 </head>
-<body class="p-4 md:p-8">
-    <div class="max-w-6xl mx-auto bg-white main-card rounded-xl p-6 md:p-10">
+<body class="p-4 md:p-10">
+    <div class="max-w-7xl mx-auto main-card rounded-3xl p-6 md:p-12">
         
-        <header class="text-center mb-10">
-            <h1 class="text-3xl md:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-teal-500 to-green-600">
-                EID Cropping Tool (Auto & Manual)
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-sky-500">
+                EID Auto-Crop & High-DPI Print Tool
             </h1>
-            <p id="target-output-display" class="text-gray-600 mt-2 font-medium">
-                Target Output: <span class="font-bold text-teal-600">3.2" W x 2.2" H (600 DPI)</span>
-            </p>
+            <p id="target-output-display" class="text-gray-600 mt-3 text-lg font-medium">Target Output: 3.2" W x 2.2" H (600 DPI) on A4 Page</p>
         </header>
 
         <!-- Dynamic Dimension Control Panel -->
-        <div class="mb-8 p-5 bg-teal-50 border-l-4 border-teal-500 rounded-lg shadow-sm">
-            <h2 class="text-xl font-bold text-teal-800 mb-4 text-center">Set Lamination Size (Inches)</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-sm mx-auto">
+        <div class="mb-10 p-6 bg-indigo-50 border-l-8 border-indigo-500 rounded-xl shadow-inner">
+            <h2 class="text-2xl font-bold text-indigo-800 mb-5 text-center">Set Lamination Size (Inches)</h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-md mx-auto">
                 <div>
-                    <label for="target-width-input" class="block text-sm font-semibold text-gray-700">Width (Inches):</label>
+                    <label for="target-width-input" class="block text-sm font-semibold text-gray-700 mb-1">Width (Inches):</label>
                     <input type="number" id="target-width-input" value="3.2" min="0.1" step="0.1" 
                            onchange="updateTargetDimensions()" 
-                           class="w-full rounded-md border-gray-300 p-2 text-center font-bold text-teal-700 focus:ring-teal-500 focus:border-teal-500">
+                           class="w-full rounded-lg border-gray-300 shadow-md p-3 text-center text-xl font-extrabold text-indigo-700 focus:ring-sky-500 focus:border-sky-500 transition duration-150">
                 </div>
                 <div>
-                    <label for="target-height-input" class="block text-sm font-semibold text-gray-700">Height (Inches):</label>
+                    <label for="target-height-input" class="block text-sm font-semibold text-gray-700 mb-1">Height (Inches):</label>
                     <input type="number" id="target-height-input" value="2.2" min="0.1" step="0.1" 
                            onchange="updateTargetDimensions()" 
-                           class="w-full rounded-md border-gray-300 p-2 text-center font-bold text-teal-700 focus:ring-teal-500 focus:border-teal-500">
+                           class="w-full rounded-lg border-gray-300 shadow-md p-3 text-center text-xl font-extrabold text-indigo-700 focus:ring-sky-500 focus:border-sky-500 transition duration-150">
                 </div>
             </div>
+            <p class="text-sm text-indigo-700 mt-4 text-center italic">The resulting aspect ratio determines the automatic crop.</p>
         </div>
         
-        <main class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <main class="grid grid-cols-1 lg:grid-cols-2 gap-10">
             <!-- Photo 1 Area -->
-            <section id="photo1-section" class="bg-gray-50 p-6 rounded-lg shadow-md">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">EID Front Side</h2>
-                <input type="file" id="file1" accept="image/*" onchange="handleFileSelect(event, 1)" class="hidden">
-                <label for="file1" class="file-label inline-block w-full text-center py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-indigo-700 transition cursor-pointer">
+            <section id="photo1-section" class="bg-gray-50 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-5 border-b-2 border-indigo-200 pb-3">EID Front Side</h2>
+                <input type="file" id="file1" accept="image/*" onchange="handleFileSelect(event, 1)">
+                <label for="file1" class="file-label inline-block w-full text-center py-3 px-6 bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-bold text-lg rounded-xl hover:from-indigo-600 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-150">
                     Upload Photo 1
                 </label>
 
-                <!-- Mode Selector -->
-                <div class="mt-4 flex rounded-lg shadow-inner bg-white p-1">
-                    <button id="mode-auto-1" onclick="setMode(1, 'auto')" class="flex-1 py-2 font-bold text-sm rounded-lg bg-teal-500 text-white transition hover:bg-teal-600">
-                        Auto Crop (Fixed Ratio)
-                    </button>
-                    <button id="mode-manual-1" onclick="setMode(1, 'manual')" class="flex-1 py-2 font-bold text-sm rounded-lg text-gray-700 transition hover:bg-gray-100">
-                        Manual Crop (Free Ratio)
-                    </button>
-                </div>
-                
-                <div class="mt-4">
-                    <h3 class="font-semibold text-gray-700 mb-2">Source Image (<span id="current-mode-1" class="font-bold text-indigo-600">Auto Mode</span>)</h3>
-                    <div class="cropper-container-wrapper">
-                        <!-- Source image element for rotation display AND cropper initialization -->
-                        <img id="image-source-1" class="source-image" alt="Source Image 1" style="display: none;">
-                        <p id="image-placeholder-1" class="text-gray-500">Upload an image to begin.</p>
-                        <!-- Hidden canvas for auto-detection processing -->
-                        <canvas id="canvas-processing-1" style="display: none;"></canvas>
+                <!-- Source Image Preview & Cropper -->
+                <div class="mt-6">
+                    <h3 class="font-semibold text-gray-700 mb-2">Source Image (View & Rotate)</h3>
+                    <div class="cropper-container">
+                        <canvas id="canvas-source-1" class="w-full h-full object-contain"></canvas>
                     </div>
                 </div>
 
                 <!-- Rotation Controls -->
-                <div class="p-3 bg-white rounded-lg shadow-inner mb-4">
+                <div class="p-4 bg-white rounded-lg shadow-md mb-6">
                     <label for="rotation-slider-1" class="block text-sm font-medium text-gray-700 mb-2 flex justify-between items-center">
-                        Rotation: <span id="rotation-value-1" class="font-bold text-indigo-600">0.0°</span>
+                        Rotate Image: <span id="rotation-value-1" class="font-bold text-indigo-600">0.0°</span>
                     </label>
                     <input type="range" id="rotation-slider-1" min="-180" max="180" value="0" step="0.1" 
                                oninput="handleRotationSlider(1, this.value)" 
                                class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
                 </div>
 
-                <!-- Process Button -->
-                <button onclick="processImage(1)" class="w-full py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-teal-700 transition shadow-lg transform hover:scale-[1.01]">
-                    Process Image (<span id="btn-size-display-1">3.2" x 2.2" @ 600 DPI</span>)
+                <!-- Auto-Detect Button -->
+                <button onclick="autoDetectAndProcess(1)" class="w-full py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white font-bold rounded-xl hover:from-green-600 hover:to-teal-700 transition shadow-lg transform hover:scale-[1.01]">
+                    Auto Detect & Center Crop (<span id="btn-size-display-1">3.2" x 2.2" @ 600 DPI</span>)
                 </button>
                 
+                <!-- Manual Override (Collapsible) -->
+                <details class="mt-4 p-3 border border-gray-300 rounded-lg bg-white shadow-sm">
+                    <summary class="font-semibold text-gray-700 cursor-pointer">Manual Fine-Tuning (Override Auto-Detect)</summary>
+                    <div id="crop-settings-1" class="pt-3">
+                        <p class="text-sm text-gray-600 mb-3">Adjust these pixels to manually define the ID boundaries if the auto-detect fails. Then click the Auto Detect button again to process.</p>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <input type="number" id="crop-x-1" placeholder="X Start (px)" class="p-2 border rounded focus:ring-blue-400" value="0" onchange="updateCropFromInput(1)">
+                            <input type="number" id="crop-y-1" placeholder="Y Start (px)" class="p-2 border rounded focus:ring-blue-400" value="0" onchange="updateCropFromInput(1)">
+                            <input type="number" id="crop-w-1" placeholder="Crop Width (px)" class="p-2 border rounded focus:ring-blue-400" onchange="updateCropFromInput(1)">
+                            <input type="number" id="crop-h-1" placeholder="Crop Height (px)" class="p-2 border rounded focus:ring-blue-400" onchange="updateCropFromInput(1)">
+                        </div>
+                    </div>
+                </details>
+
 
                 <!-- Processed Output -->
-                <div class="mt-6">
-                    <h3 class="font-semibold text-gray-700 mb-2">Final Output Preview:</h3>
+                <div class="mt-8">
+                    <h3 class="font-semibold text-gray-700 mb-2">Final DPI Output: <span id="size-display-1" class="text-green-600"></span></h3>
                     <canvas id="canvas-output-1" class="canvas-output mx-auto" style="display: none;"></canvas>
-                    <p id="status-1" class="text-sm text-gray-500 mt-2 font-medium"></p>
+                    <p id="status-1" class="text-sm text-gray-500 mt-3 font-medium"></p>
                 </div>
             </section>
 
             <!-- Photo 2 Area -->
-            <section id="photo2-section" class="bg-gray-50 p-6 rounded-lg shadow-md">
-                <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">EID Backside</h2>
-                <input type="file" id="file2" accept="image/*" onchange="handleFileSelect(event, 2)" class="hidden">
-                <label for="file2" class="file-label inline-block w-full text-center py-3 bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold rounded-lg hover:from-blue-600 hover:to-indigo-700 transition cursor-pointer">
+            <section id="photo2-section" class="bg-gray-50 p-6 rounded-xl shadow-lg">
+                <h2 class="text-2xl font-bold text-gray-800 mb-5 border-b-2 border-indigo-200 pb-3">EID Backside</h2>
+                <input type="file" id="file2" accept="image/*" onchange="handleFileSelect(event, 2)">
+                <label for="file2" class="file-label inline-block w-full text-center py-3 px-6 bg-gradient-to-r from-indigo-500 to-blue-600 text-white font-bold text-lg rounded-xl hover:from-indigo-600 hover:to-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition duration-150">
                     Upload Photo 2
                 </label>
 
-                <!-- Mode Selector -->
-                <div class="mt-4 flex rounded-lg shadow-inner bg-white p-1">
-                    <button id="mode-auto-2" onclick="setMode(2, 'auto')" class="flex-1 py-2 font-bold text-sm rounded-lg bg-teal-500 text-white transition hover:bg-teal-600">
-                        Auto Crop (Fixed Ratio)
-                    </button>
-                    <button id="mode-manual-2" onclick="setMode(2, 'manual')" class="flex-1 py-2 font-bold text-sm rounded-lg text-gray-700 transition hover:bg-gray-100">
-                        Manual Crop (Free Ratio)
-                    </button>
-                </div>
-
-                <div class="mt-4">
-                    <h3 class="font-semibold text-gray-700 mb-2">Source Image (<span id="current-mode-2" class="font-bold text-indigo-600">Auto Mode</span>)</h3>
-                    <div class="cropper-container-wrapper">
-                        <!-- Source image element for rotation display AND cropper initialization -->
-                        <img id="image-source-2" class="source-image" alt="Source Image 2" style="display: none;">
-                        <p id="image-placeholder-2" class="text-gray-500">Upload an image to begin.</p>
-                        <!-- Hidden canvas for auto-detection processing -->
-                        <canvas id="canvas-processing-2" style="display: none;"></canvas>
+                <!-- Source Image Preview & Cropper -->
+                <div class="mt-6">
+                    <h3 class="font-semibold text-gray-700 mb-2">Source Image (View & Rotate)</h3>
+                    <div class="cropper-container">
+                        <canvas id="canvas-source-2" class="w-full h-full object-contain"></canvas>
                     </div>
                 </div>
 
                 <!-- Rotation Controls -->
-                <div class="p-3 bg-white rounded-lg shadow-inner mb-4">
+                <div class="p-4 bg-white rounded-lg shadow-md mb-6">
                     <label for="rotation-slider-2" class="block text-sm font-medium text-gray-700 mb-2 flex justify-between items-center">
-                        Rotation: <span id="rotation-value-2" class="font-bold text-indigo-600">0.0°</span>
+                        Rotate Image: <span id="rotation-value-2" class="font-bold text-indigo-600">0.0°</span>
                     </label>
                     <input type="range" id="rotation-slider-2" min="-180" max="180" value="0" step="0.1" 
                                oninput="handleRotationSlider(2, this.value)" 
                                class="w-full h-2 bg-indigo-200 rounded-lg appearance-none cursor-pointer">
                 </div>
 
-                <!-- Process Button -->
-                <button onclick="processImage(2)" class="w-full py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white font-bold rounded-lg hover:from-green-600 hover:to-teal-700 transition shadow-lg transform hover:scale-[1.01]">
-                    Process Image (<span id="btn-size-display-2">3.2" x 2.2" @ 600 DPI</span>)
+                <!-- Auto-Detect Button -->
+                <button onclick="autoDetectAndProcess(2)" class="w-full py-3 bg-gradient-to-r from-green-500 to-teal-600 text-white font-bold rounded-xl hover:from-green-600 hover:to-teal-700 transition shadow-lg transform hover:scale-[1.01]">
+                    Auto Detect & Center Crop (<span id="btn-size-display-2">3.2" x 2.2" @ 600 DPI</span>)
                 </button>
                 
+                <!-- Manual Override (Collapsible) -->
+                <details class="mt-4 p-3 border border-gray-300 rounded-lg bg-white shadow-sm">
+                    <summary class="font-semibold text-gray-700 cursor-pointer">Manual Fine-Tuning (Override Auto-Detect)</summary>
+                    <div id="crop-settings-2" class="pt-3">
+                        <p class="text-sm text-gray-600 mb-3">Adjust these pixels to manually define the ID boundaries if the auto-detect fails. Then click the Auto Detect button again to process.</p>
+                        <div class="grid grid-cols-2 gap-4 text-sm">
+                            <input type="number" id="crop-x-2" placeholder="X Start (px)" class="p-2 border rounded focus:ring-blue-400" value="0" onchange="updateCropFromInput(2)">
+                            <input type="number" id="crop-y-2" placeholder="Y Start (px)" class="p-2 border rounded focus:ring-blue-400" value="0" onchange="updateCropFromInput(2)">
+                            <input type="number" id="crop-w-2" placeholder="Crop Width (px)" class="p-2 border rounded focus:ring-blue-400" onchange="updateCropFromInput(2)">
+                            <input type="number" id="crop-h-2" placeholder="Crop Height (px)" class="p-2 border rounded focus:ring-blue-400" onchange="updateCropFromInput(2)">
+                        </div>
+                    </div>
+                </details>
+
 
                 <!-- Processed Output -->
-                <div class="mt-6">
-                    <h3 class="font-semibold text-gray-700 mb-2">Final Output Preview:</h3>
+                <div class="mt-8">
+                    <h3 class="font-semibold text-gray-700 mb-2">Final DPI Output: <span id="size-display-2" class="text-green-600"></span></h3>
                     <canvas id="canvas-output-2" class="canvas-output mx-auto" style="display: none;"></canvas>
-                    <p id="status-2" class="text-sm text-gray-500 mt-2 font-medium"></p>
+                    <p id="status-2" class="text-sm text-gray-500 mt-3 font-medium"></p>
                 </div>
             </section>
         </main>
 
         <!-- Global Output Controls -->
-        <div class="mt-10 pt-6 border-t border-gray-200 text-center">
-            <h2 class="text-2xl font-extrabold text-gray-800 mb-4">Download Print-Ready PDF</h2>
-            <p id="global-status" class="text-red-600 mb-5 font-semibold"></p>
-            <button onclick="generatePDF()" class="py-3 px-8 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold rounded-full text-lg hover:from-emerald-600 hover:to-green-700 focus:ring-4 focus:ring-green-300 transition shadow-lg transform hover:scale-105">
+        <div class="mt-12 pt-8 border-t-2 border-gray-200 text-center">
+            <h2 class="text-3xl font-extrabold text-gray-800 mb-5">Download Print-Ready PDF</h2>
+            <p id="global-status" class="text-red-600 mb-6 font-semibold text-lg"></p>
+            <button onclick="generatePDF()" class="py-4 px-10 bg-gradient-to-r from-emerald-500 to-green-600 text-white font-extrabold rounded-full text-xl hover:from-emerald-600 hover:to-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition duration-150 shadow-2xl transform hover:scale-105">
                 Generate A4 PDF (600 DPI)
             </button>
         </div>
@@ -198,16 +212,17 @@
     <script>
         // Global storage for original images and configuration
         const images = {
-            1: { img: null, cropper: null, processed: false, rotation: 0, mode: 'auto' },
-            2: { img: null, cropper: null, processed: false, rotation: 0, mode: 'auto' }
+            1: { img: null, processed: false, rotation: 0 },
+            2: { img: null, processed: false, rotation: 0 }
         };
 
         // --- CORE DIMENSION CONFIGURATION ---
         const DPI = 600; 
         const A4_WIDTH_MM = 210;
         const A4_HEIGHT_MM = 297;
-        const BACKGROUND_TOLERANCE = 50; 
+        const BACKGROUND_TOLERANCE = 40; // Max difference for a pixel component to be considered background
         
+        // Dynamic calculated size variables
         let TARGET_WIDTH_IN, TARGET_HEIGHT_IN;
         let TARGET_WIDTH_PX, TARGET_HEIGHT_PX;
         let TARGET_WIDTH_MM, TARGET_HEIGHT_MM;
@@ -220,112 +235,66 @@
             const widthInput = document.getElementById('target-width-input');
             const heightInput = document.getElementById('target-height-input');
 
+            // 1. Read and validate values
             let width = parseFloat(widthInput.value);
             let height = parseFloat(heightInput.value);
             
+            // Default and minimum check
             if (isNaN(width) || width <= 0.1) width = 3.2;
             if (isNaN(height) || height <= 0.1) height = 2.2;
             
             widthInput.value = width.toFixed(1);
             heightInput.value = height.toFixed(1);
 
+            // 2. Update global variables
             TARGET_WIDTH_IN = width;
             TARGET_HEIGHT_IN = height;
+
+            // 3. Recalculate dependent values
             TARGET_WIDTH_PX = Math.round(TARGET_WIDTH_IN * DPI);
             TARGET_HEIGHT_PX = Math.round(TARGET_HEIGHT_IN * DPI);
+            
             TARGET_WIDTH_MM = TARGET_WIDTH_IN * 25.4;
             TARGET_HEIGHT_MM = TARGET_HEIGHT_IN * 25.4;
+            
             TARGET_ASPECT_RATIO = TARGET_WIDTH_IN / TARGET_HEIGHT_IN;
 
-            const displayString = `${TARGET_WIDTH_IN.toFixed(1)}" x ${TARGET_HEIGHT_IN.toFixed(1)}" @ ${DPI} DPI`;
+            // 4. Update UI labels
+            const displayString = `${TARGET_WIDTH_IN.toFixed(1)}" W x ${TARGET_HEIGHT_IN.toFixed(1)}" H (${TARGET_WIDTH_PX} x ${TARGET_HEIGHT_PX} px @ ${DPI} DPI)`;
+            const btnDisplayString = `${TARGET_WIDTH_IN.toFixed(1)}" x ${TARGET_HEIGHT_IN.toFixed(1)}" @ ${DPI} DPI`;
             
-            document.getElementById('target-output-display').querySelector('span').textContent = `${TARGET_WIDTH_IN.toFixed(1)}" W x ${TARGET_HEIGHT_IN.toFixed(1)}" H (600 DPI)`;
-            document.getElementById('btn-size-display-1').textContent = displayString;
-            document.getElementById('btn-size-display-2').textContent = displayString;
+            document.getElementById('target-output-display').textContent = `Target Output: ${displayString} on A4 Page`;
             
-            // Re-initialize cropper to update aspect ratio if in manual mode, but only if it's NOT the active mode
-            for (let id of [1, 2]) {
-                if (images[id].cropper && images[id].mode === 'auto') {
-                    // Only applies aspect ratio if we are in auto mode (fixed ratio)
-                    images[id].cropper.setAspectRatio(TARGET_ASPECT_RATIO);
-                }
-                images[id].processed = false;
-            }
+            document.getElementById('size-display-1').textContent = displayString;
+            document.getElementById('size-display-2').textContent = displayString;
+            document.getElementById('btn-size-display-1').textContent = btnDisplayString;
+            document.getElementById('btn-size-display-2').textContent = btnDisplayString;
+            
+            images[1].processed = false;
+            images[2].processed = false;
         }
         
         window.onload = updateTargetDimensions;
 
 
         /**
-         * Changes the processing mode between 'auto' and 'manual'.
-         * @param {number} id Photo ID (1 or 2).
-         * @param {string} mode 'auto' or 'manual'.
-         */
-        function setMode(id, mode) {
-            const imgData = images[id];
-            if (!imgData.img) {
-                document.getElementById(`status-${id}`).textContent = `Please upload an image before switching to ${mode} mode.`;
-                return;
-            }
-
-            imgData.mode = mode;
-            const imgElement = document.getElementById(`image-source-${id}`);
-            const currentModeDisplay = document.getElementById(`current-mode-${id}`);
-            const autoBtn = document.getElementById(`mode-auto-${id}`);
-            const manualBtn = document.getElementById(`mode-manual-${id}`);
-
-            // Cleanup any existing Cropper instance
-            if (imgData.cropper) {
-                imgData.cropper.destroy();
-                imgData.cropper = null;
-            }
-            
-            if (mode === 'manual') {
-                // MANUAL MODE: Free Aspect Ratio
-                imgData.cropper = new Cropper(imgElement, {
-                    aspectRatio: NaN, // Setting to NaN enables free cropping
-                    viewMode: 1, // Restrict the crop box to not exceed the canvas
-                    dragMode: 'move',
-                    autoCropArea: 0.8, // Initial crop area size
-                    toggleDragModeOnDblclick: false
-                });
-                currentModeDisplay.textContent = 'Manual Mode (Free Ratio Crop)';
-                manualBtn.classList.add('bg-teal-500', 'text-white');
-                manualBtn.classList.remove('text-gray-700', 'hover:bg-gray-100');
-                autoBtn.classList.remove('bg-teal-500', 'text-white');
-                autoBtn.classList.add('text-gray-700', 'hover:bg-gray-100');
-                document.getElementById(`status-${id}`).textContent = 'Manual mode enabled. Adjust the crop box freely. Note: Final output will be stretched/compressed to fixed print size.';
-
-            } else { // Auto Mode: Fixed Aspect Ratio
-                imgData.cropper = new Cropper(imgElement, {
-                    aspectRatio: TARGET_ASPECT_RATIO, // Fixed ratio based on target dimensions
-                    viewMode: 1,
-                    dragMode: 'move',
-                    autoCropArea: 0.8,
-                    toggleDragModeOnDblclick: false,
-                    // Auto-detect is not performed by Cropper.js, but our manual mode still uses Cropper for display
-                    autoCrop: false 
-                });
-
-                currentModeDisplay.textContent = 'Auto Mode (Fixed Ratio Crop)';
-                autoBtn.classList.add('bg-teal-500', 'text-white');
-                autoBtn.classList.remove('text-gray-700', 'hover:bg-gray-100');
-                manualBtn.classList.remove('bg-teal-500', 'text-white');
-                manualBtn.classList.add('text-gray-700', 'hover:bg-gray-100');
-                document.getElementById(`status-${id}`).textContent = 'Auto mode enabled. Click Process to auto-detect and crop to target ratio.';
-            }
-            imgData.processed = false;
-        }
-        
-        /**
-         * Checks if a pixel color is close to white (background).
+         * Checks if a pixel color is close to white (background), used for simple edge detection.
+         * @param {number} r Red channel value (0-255).
+         * @param {number} g Green channel value (0-255).
+         * @param {number} b Blue channel value (0-255).
+         * @returns {boolean} True if the pixel is considered background.
          */
         function isBackground(r, g, b) {
-            return (r > 255 - BACKGROUND_TOLERANCE && g > 255 - BACKGROUND_TOLERANCE && b > 255 - BACKGROUND_TOLERANCE);
+            // Assume background is close to white (255, 255, 255)
+            return (r > 255 - BACKGROUND_TOLERANCE && 
+                    g > 255 - BACKGROUND_TOLERANCE && 
+                    b > 255 - BACKGROUND_TOLERANCE);
         }
 
         /**
-         * Finds the tightest bounding box around non-background pixels on the canvas.
+         * Core auto-detection logic: finds the tightest bounding box around non-background pixels.
+         * @param {HTMLCanvasElement} canvas The canvas containing the rotated image.
+         * @returns {{x: number, y: number, w: number, h: number} | null} The detected bounding box.
          */
         function autoDetectCorners(canvas) {
             const ctx = canvas.getContext('2d');
@@ -335,10 +304,9 @@
             let minX = canvas.width, minY = canvas.height;
             let maxX = 0, maxY = 0;
             let foundContent = false;
-            const step = 4; // Check every 4th pixel for a faster scan
 
-            for (let y = 0; y < canvas.height; y += step) {
-                for (let x = 0; x < canvas.width; x += step) {
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
                     const i = (y * canvas.width + x) * 4;
                     const r = data[i];
                     const g = data[i + 1];
@@ -354,38 +322,80 @@
                 }
             }
             
-            if (!foundContent) return null;
+            if (!foundContent) {
+                return null;
+            }
 
-            minX = Math.max(0, minX - step);
-            minY = Math.max(0, minY - step);
-            maxX = Math.min(canvas.width, maxX + step);
-            maxY = Math.min(canvas.height, maxY + step);
-            
-            const w = Math.max(0, maxX - minX);
-            const h = Math.max(0, maxY - minY);
+            // Add a small safety margin (e.g., 5 pixels)
+            const margin = 5; 
+            minX = Math.max(0, minX - margin);
+            minY = Math.max(0, minY - margin);
+            maxX = Math.min(canvas.width, maxX + margin);
+            maxY = Math.min(canvas.height, maxY + margin);
+
+            const w = maxX - minX;
+            const h = maxY - minY;
 
             return { x: minX, y: minY, w: w, h: h };
         }
 
         /**
-         * Redraws the source image element, applying the current rotation.
+         * Redraws the source canvas, applying the current rotation and drawing the crop overlay.
          * @param {number} id Photo ID (1 or 2).
          */
-        function drawSourceImage(id) {
+        function drawSourceCanvas(id) {
             const imgData = images[id];
+            const img = imgData.img;
+            if (!img) return;
+
+            const canvas = document.getElementById(`canvas-source-${id}`);
+            const ctx = canvas.getContext('2d');
+            const rotation = imgData.rotation;
+
+            const OW = img.naturalWidth;
+            const OH = img.naturalHeight;
+
+            canvas.width = OW;
+            canvas.height = OH;
+
+            ctx.clearRect(0, 0, OW, OH);
             
-            // If Cropper is active, use its API to rotate
-            if (imgData.cropper) {
-                imgData.cropper.rotateTo(imgData.rotation);
-            } else {
-                 // Fallback display rotation if Cropper is not fully initialized
-                const imgElement = document.getElementById(`image-source-${id}`);
-                imgElement.style.transform = `rotate(${imgData.rotation}deg)`;
+            // --- 1. Apply Image Transformation for Display ---
+            ctx.save();
+            ctx.translate(OW / 2, OH / 2);
+            ctx.rotate(rotation * Math.PI / 180);
+            ctx.drawImage(img, -OW / 2, -OH / 2, OW, OH);
+            ctx.restore(); 
+
+            // --- 2. Draw Cropping Overlay if Manual/Detected Crop is Set ---
+            const x = parseFloat(document.getElementById(`crop-x-${id}`).value) || 0;
+            const y = parseFloat(document.getElementById(`crop-y-${id}`).value) || 0;
+            const w = parseFloat(document.getElementById(`crop-w-${id}`).value) || 0;
+            const h = parseFloat(document.getElementById(`crop-h-${id}`).value) || 0;
+            
+            if (w > 0 && h > 0) {
+                ctx.strokeStyle = '#f97316'; // Orange border for crop area
+                ctx.lineWidth = 4;
+                ctx.setLineDash([10, 5]); // Dashed line
+                ctx.strokeRect(x, y, w, h);
+                ctx.setLineDash([]);
             }
         }
 
         /**
+         * Updates the crop rectangle based on manual input changes, then redraws.
+         * @param {number} id Photo ID (1 or 2).
+         */
+        function updateCropFromInput(id) {
+            if (!images[id].img) return;
+            drawSourceCanvas(id);
+        }
+
+
+        /**
          * Handles file selection and initial image loading.
+         * @param {Event} event The file input change event.
+         * @param {number} id Photo ID (1 or 2).
          */
         function handleFileSelect(event, id) {
             const file = event.target.files[0];
@@ -393,23 +403,24 @@
 
             images[id].processed = false;
             images[id].rotation = 0; 
+
             document.getElementById(`rotation-slider-${id}`).value = 0;
             document.getElementById(`rotation-value-${id}`).textContent = '0.0°';
-            document.getElementById(`status-${id}`).textContent = 'Image loaded. Select mode and adjust rotation.';
-            document.getElementById(`image-placeholder-${id}`).style.display = 'none';
 
             const reader = new FileReader();
             reader.onload = function(e) {
                 const img = new Image();
                 img.onload = function() {
                     images[id].img = img;
-                    const imgElement = document.getElementById(`image-source-${id}`);
-                    imgElement.src = img.src;
-                    imgElement.style.display = 'block';
-                    imgElement.style.transform = 'rotate(0deg)'; 
                     
-                    // Reset to auto mode and initialize cropper for the new image
-                    setMode(id, 'auto'); 
+                    // Initialize crop to the full image
+                    document.getElementById(`crop-x-${id}`).value = 0;
+                    document.getElementById(`crop-y-${id}`).value = 0;
+                    document.getElementById(`crop-w-${id}`).value = img.naturalWidth;
+                    document.getElementById(`crop-h-${id}`).value = img.naturalHeight;
+                    
+                    drawSourceCanvas(id);
+                    document.getElementById(`status-${id}`).textContent = `Image loaded: ${img.naturalWidth} x ${img.naturalHeight} px. Adjust rotation if needed.`;
                 };
                 img.src = e.target.result;
             };
@@ -418,131 +429,125 @@
         
         /**
          * Handles the rotation slider input.
+         * @param {number} id Photo ID (1 or 2).
+         * @param {string} value The current rotation value in degrees.
          */
         function handleRotationSlider(id, value) {
             const degrees = parseFloat(value);
             images[id].rotation = degrees;
             document.getElementById(`rotation-value-${id}`).textContent = `${degrees.toFixed(1)}°`;
-            drawSourceImage(id);
-            document.getElementById(`status-${id}`).textContent = `Rotation set to ${degrees.toFixed(1)}°. Click Process.`;
+            drawSourceCanvas(id);
+            document.getElementById(`status-${id}`).textContent = `Rotation set to ${degrees.toFixed(1)}°. Click 'Auto Detect' to process.`;
         }
 
+
         /**
-         * Executes the processing workflow based on the current mode (Auto or Manual).
+         * Executes the auto-detection and processing workflow.
+         * @param {number} id Photo ID (1 or 2).
          */
-        async function processImage(id) {
+        function autoDetectAndProcess(id) {
+            // Step 0: Ensure image is loaded
             const imgData = images[id];
             if (!imgData.img) {
                 document.getElementById(`status-${id}`).textContent = 'Error: Please upload an image first.';
                 return;
             }
             
-            document.getElementById(`status-${id}`).textContent = `Processing image in ${imgData.mode} mode...`;
-            
-            let finalCropX, finalCropY, finalCropW, finalCropH;
-            let sourceImageElement; // The element used for the final drawImage call
+            // 1. Create a rotated canvas for detection/cropping
+            const rotatedCanvas = document.createElement('canvas');
+            const OW = imgData.img.naturalWidth;
+            const OH = imgData.img.naturalHeight;
 
-            // --- STEP 1: Get Initial Crop Coordinates based on Mode ---
-            if (imgData.mode === 'manual') {
-                if (!imgData.cropper) {
-                    document.getElementById(`status-${id}`).textContent = 'Error: Cropper not initialized. Try re-selecting the mode.';
-                    return;
-                }
-                // MANUAL MODE: Get coordinates directly from the Cropper instance
-                const cropData = imgData.cropper.getData();
+            rotatedCanvas.width = OW;
+            rotatedCanvas.height = OH;
+            const rCtx = rotatedCanvas.getContext('2d');
+
+            rCtx.save();
+            rCtx.translate(OW / 2, OH / 2);
+            rCtx.rotate(imgData.rotation * Math.PI / 180);
+            rCtx.drawImage(imgData.img, -OW / 2, -OH / 2, OW, OH);
+            rCtx.restore();
+
+            // 2. Auto-Detect Corners (Bounding Box) on the Rotated Image
+            let detectedCrop = autoDetectCorners(rotatedCanvas);
+            let userCropX, userCropY, userCropW, userCropH;
+            
+            if (detectedCrop) {
+                 // Use detected crop for processing and update manual inputs
+                userCropX = detectedCrop.x;
+                userCropY = detectedCrop.y;
+                userCropW = detectedCrop.w;
+                userCropH = detectedCrop.h;
                 
-                // Cropper.js gives the coordinates relative to the original unrotated image, 
-                // but since we apply the rotation to the image element before initializing cropper,
-                // the data is relative to the rotated bounding box.
-                finalCropX = cropData.x;
-                finalCropY = cropData.y;
-                finalCropW = cropData.width;
-                finalCropH = cropData.height;
+                document.getElementById(`crop-x-${id}`).value = userCropX.toFixed(0);
+                document.getElementById(`crop-y-${id}`).value = userCropY.toFixed(0);
+                document.getElementById(`crop-w-${id}`).value = userCropW.toFixed(0);
+                document.getElementById(`crop-h-${id}`).value = userCropH.toFixed(0);
                 
-                // Use the image element that Cropper.js is attached to
-                sourceImageElement = document.getElementById(`image-source-${id}`);
+                document.getElementById(`status-${id}`).textContent = `✅ Auto-detected boundaries. Proceeding with center crop...`;
 
             } else {
-                // AUTO MODE: Use the internal processing canvas for detection and fixed ratio calculation
-
-                // 1a. Draw the rotated image onto a hidden processing canvas
-                const rotatedCanvas = document.getElementById(`canvas-processing-${id}`);
-                const OW = imgData.img.naturalWidth;
-                const OH = imgData.img.naturalHeight;
-
-                rotatedCanvas.width = OW;
-                rotatedCanvas.height = OH;
-                const rCtx = rotatedCanvas.getContext('2d');
-
-                rCtx.clearRect(0, 0, OW, OH);
-                rCtx.save();
-                rCtx.translate(OW / 2, OH / 2);
-                rCtx.rotate(imgData.rotation * Math.PI / 180);
-                rCtx.drawImage(imgData.img, -OW / 2, -OH / 2, OW, OH);
-                rCtx.restore();
-
-                // 1b. Auto-Detect Corners (Bounding Box)
-                const detectedCrop = autoDetectCorners(rotatedCanvas);
+                // Fallback: use user input (or full image if inputs weren't changed)
+                userCropX = parseFloat(document.getElementById(`crop-x-${id}`).value) || 0;
+                userCropY = parseFloat(document.getElementById(`crop-y-${id}`).value) || 0;
+                userCropW = parseFloat(document.getElementById(`crop-w-${id}`).value) || OW;
+                userCropH = parseFloat(document.getElementById(`crop-h-${id}`).value) || OH;
                 
-                if (!detectedCrop || detectedCrop.w <= 10 || detectedCrop.h <= 10) {
-                    document.getElementById(`status-${id}`).textContent = 'Error: Could not detect clear ID boundaries. Try Manual Mode.';
-                    return;
-                }
-                
-                const userCropX = detectedCrop.x;
-                const userCropY = detectedCrop.y;
-                const userCropW = detectedCrop.w;
-                const userCropH = detectedCrop.h;
-                
-                // 1c. Calculate the fixed-ratio crop area centered within the detected area
-                if ((userCropW / userCropH) > TARGET_ASPECT_RATIO) {
-                    // Detected area is wider than needed -> Constrain by height
-                    finalCropH = userCropH;
-                    finalCropW = finalCropH * TARGET_ASPECT_RATIO;
-                } else {
-                    // Detected area is taller than needed -> Constrain by width
-                    finalCropW = userCropW;
-                    finalCropH = finalCropW / TARGET_ASPECT_RATIO;
-                }
-                
-                // Center the fixed-ratio crop within the detected area
-                finalCropX = userCropX + (userCropW - finalCropW) / 2;
-                finalCropY = userCropY + (userCropH - finalCropH) / 2;
-
-                // Use the internally generated rotated canvas
-                sourceImageElement = rotatedCanvas;
+                document.getElementById(`status-${id}`).textContent = `⚠️ Auto-detection failed or found no content. Using manual area: ${userCropW} x ${userCropH} px.`;
             }
+            
+            // Draw the final detected/manual crop on the source preview
+            drawSourceCanvas(id);
 
-            // --- STEP 2: Final Crop and Resize ---
+            // 3. Calculate the fixed-ratio crop area centered within the detected area
+            let finalCropW, finalCropH, finalCropX, finalCropY;
+            
+            if ((userCropW / userCropH) > TARGET_ASPECT_RATIO) {
+                // Detected area is wider than needed -> Constrain by height
+                finalCropH = userCropH;
+                finalCropW = finalCropH * TARGET_ASPECT_RATIO;
+            } else {
+                // Detected area is taller than needed -> Constrain by width
+                finalCropW = userCropW;
+                finalCropH = finalCropW / TARGET_ASPECT_RATIO;
+            }
+            
+            // Center the fixed-ratio crop within the detected/manual area
+            finalCropX = userCropX + (userCropW - finalCropW) / 2;
+            finalCropY = userCropY + (userCropH - finalCropH) / 2;
+
+            // 4. Perform final Crop and Resize
             try {
-                // Crop Canvas (cuts out the exact ratio area from the source)
+                // Crop Canvas (cuts out the exact ratio area from the rotated image)
                 const croppedCanvas = document.createElement('canvas');
                 croppedCanvas.width = finalCropW; 
                 croppedCanvas.height = finalCropH; 
                 const cCtx = croppedCanvas.getContext('2d');
 
-                // Draw the part defined by the coordinates (whether fixed-ratio auto or free-ratio manual)
                 cCtx.drawImage(
-                    sourceImageElement, 
-                    finalCropX, finalCropY, finalCropW, finalCropH, // Source 
+                    rotatedCanvas, 
+                    finalCropX, finalCropY, finalCropW, finalCropH, // Source (rotated image)
                     0, 0, finalCropW, finalCropH // Destination
                 );
 
-                // Output Canvas (Resized to fixed DPI - This is where stretching/compression occurs in Manual Mode)
+                // Output Canvas (Resized to fixed DPI)
                 const outputCanvas = document.getElementById(`canvas-output-${id}`);
-                outputCanvas.width = TARGET_WIDTH_PX;
-                outputCanvas.height = TARGET_HEIGHT_PX;
+                const targetW_px = TARGET_WIDTH_PX;
+                const targetH_px = TARGET_HEIGHT_PX;
+                
+                outputCanvas.width = targetW_px;
+                outputCanvas.height = targetH_px;
                 outputCanvas.style.display = 'block';
 
                 const outputCtx = outputCanvas.getContext('2d');
                 outputCtx.drawImage(
                     croppedCanvas, 
                     0, 0, finalCropW, finalCropH, 
-                    0, 0, TARGET_WIDTH_PX, TARGET_HEIGHT_PX 
+                    0, 0, targetW_px, targetH_px 
                 );
 
                 imgData.processed = true;
-                document.getElementById(`status-${id}`).textContent = `✅ Finished! Image ready for print at ${TARGET_WIDTH_IN.toFixed(1)}" x ${TARGET_HEIGHT_IN.toFixed(1)}" (600 DPI).`;
+                document.getElementById(`status-${id}`).textContent = `✅ Finished! Cropped area: ${finalCropW.toFixed(0)} x ${finalCropH.toFixed(0)} px. Ready for PDF export.`;
 
             } catch (error) {
                 console.error("Image processing failed:", error);
@@ -561,15 +566,14 @@
             const isPhoto2Processed = images[2].processed;
 
             if (!isPhoto1Processed && !isPhoto2Processed) {
-                document.getElementById('global-status').textContent = 'Error: Please process at least one photo before generating the PDF.';
+                document.getElementById('global-status').textContent = 'Error: Please auto-detect and process at least one photo before generating the PDF.';
                 return;
             }
 
             const { jsPDF } = window.jspdf;
-            // Create PDF with custom dimensions for precise MM control
             const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'p' });
 
-            let xOffset, yOffset = 15; 
+            let xOffset, yOffset = 15; // 15mm top margin
             
             const targetWidthMM = TARGET_WIDTH_MM;
             const targetHeightMM = TARGET_HEIGHT_MM;
@@ -587,6 +591,7 @@
                         xOffset = (A4_WIDTH_MM - targetWidthMM) / 2;
                     }
 
+                    // Use JPEG at quality 1.0 (highest) to preserve 600 DPI fidelity
                     const imgData = canvas.toDataURL('image/jpeg', 1.0); 
                     
                     doc.addImage(imgData, 'JPEG', xOffset, yOffset, targetWidthMM, targetHeightMM);
@@ -597,7 +602,7 @@
             // Filename generation
             const sizeString = `${TARGET_WIDTH_IN.toFixed(1)}x${TARGET_HEIGHT_IN.toFixed(1)}`;
             const photoCount = (isPhoto1Processed && isPhoto2Processed) ? 'Both' : (isPhoto1Processed ? 'Front' : 'Back');
-            const filename = `EID_Crop_${photoCount}_${sizeString}in_${DPI}DPI.pdf`;
+            const filename = `EID_AutoCrop_${photoCount}_${sizeString}in_${DPI}DPI.pdf`;
             
             doc.save(filename);
             
